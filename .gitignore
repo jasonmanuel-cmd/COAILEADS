@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Env (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Debug / OS
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Vercel
+.vercel
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Local scratch / prompt copies (do not publish)
+Untitled
