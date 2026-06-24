@@ -309,6 +309,9 @@ header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 1
 
     <div class="sidebar-section">
       <div class="sidebar-label">Industry Categories <span id="cat-count" style="color:var(--green);font-size:9px;font-family:var(--mono);">0 selected</span></div>
+      <div class="field">
+        <input type="text" id="cat-search" placeholder="Search categories..." oninput="filterCats(this.value)" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--white);font-family:var(--sans);font-size:12px;padding:7px 10px;border-radius:4px;outline:none;"/>
+      </div>
 
       <div class="vertical-group">
         <div class="vertical-header">
@@ -445,6 +448,11 @@ header{background:var(--panel);border-bottom:1px solid var(--border);padding:0 1
         </div>
         <div class="cat-grid">
           <div class="cat-btn" data-cat="smoke shop" data-vertical="retail" onclick="toggleCat(this)">Smoke Shop</div>
+          <div class="cat-btn" data-cat="head shop" data-vertical="retail" onclick="toggleCat(this)">Head Shop</div>
+          <div class="cat-btn" data-cat="vape shop" data-vertical="retail" onclick="toggleCat(this)">Vape Shop</div>
+          <div class="cat-btn" data-cat="cbd store" data-vertical="retail" onclick="toggleCat(this)">CBD Store</div>
+          <div class="cat-btn" data-cat="kratom shop" data-vertical="retail" onclick="toggleCat(this)">Kratom Shop</div>
+          <div class="cat-btn" data-cat="hookah shop" data-vertical="retail" onclick="toggleCat(this)">Hookah Shop</div>
           <div class="cat-btn" data-cat="jewelry store" data-vertical="retail" onclick="toggleCat(this)">Jewelry</div>
           <div class="cat-btn" data-cat="pawn shop" data-vertical="retail" onclick="toggleCat(this)">Pawn Shop</div>
           <div class="cat-btn" data-cat="music store" data-vertical="retail" onclick="toggleCat(this)">Music Store</div>
@@ -695,13 +703,32 @@ function clearAllCats(){
 // ─── HOT ONLY ───
 function selectHotOnly(){
   clearAllCats();
-  const hot = ['hvac','plumber','electrician','roofing contractor','auto repair','dentist','pest control','landscaping','house cleaning','tattoo shop','hair salon','barber shop'];
+  const hot = ['hvac','plumber','electrician','roofing contractor','auto repair','dentist','pest control','landscaping','house cleaning','tattoo shop','hair salon','barber shop','smoke shop','head shop','vape shop','cbd store'];
   hot.forEach(cat => {
     activeCats.add(cat);
     const btn = document.querySelector(`[data-cat="${cat}"]`);
     if(btn) btn.classList.add('active');
   });
   updateCatCount();
+}
+
+// ─── CATEGORY SEARCH/FILTER ───
+function filterCats(query){
+  query = query.toLowerCase().trim();
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    const cat = btn.dataset.cat.toLowerCase();
+    const label = btn.textContent.toLowerCase();
+    if(!query || cat.includes(query) || label.includes(query)){
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+  // Show/hide vertical groups based on visible children
+  document.querySelectorAll('.vertical-group').forEach(group => {
+    const visible = group.querySelectorAll('.cat-btn[style*="display: none"]').length < group.querySelectorAll('.cat-btn').length;
+    group.style.display = visible ? '' : 'none';
+  });
 }
 
 // ─── CORS PROXY FETCH ───

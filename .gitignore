@@ -27,3 +27,5 @@ supabase/.temp/
 
 # Local scratch / prompt copies (do not publish)
 Untitled
+
+.vercel
