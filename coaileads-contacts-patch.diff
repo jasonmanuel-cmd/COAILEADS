@@ -1,0 +1,257 @@
+diff --git a/.env.example b/.env.example
+index ebfba81..f8c58e1 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,8 +1,2 @@
+-NEXT_PUBLIC_SUPABASE_URL=
+-SUPABASE_SERVICE_ROLE_KEY=
+-PAGESPEED_API_KEY=
+-NEXT_PUBLIC_GA_MEASUREMENT_ID=
+-SMS_PROVIDER=console
+-TWILIO_ACCOUNT_SID=
+-TWILIO_AUTH_TOKEN=
+-TWILIO_FROM_NUMBER=
++APP_PASSWORD=
++GOOGLE_PLACES_API_KEY=
+diff --git a/api/search.js b/api/search.js
+index 230eb72..4a103ce 100644
+--- a/api/search.js
++++ b/api/search.js
+@@ -17,11 +17,14 @@ module.exports = async function handler(req, res) {
+   res.setHeader('Access-Control-Allow-Headers', 'Authorization');
+   if (req.method === 'OPTIONS') return res.status(200).end();
+ 
+-  // AUTH CHECK
+-  const MASTER_PASSWORD = process.env.APP_PASSWORD || 'COAI-GOD-MODE-2026';
+-  const userAuth = req.headers['authorization'];
++  // AUTH CHECK — fail closed. No env var = no access, no fallback.
++  const MASTER_PASSWORD = process.env.APP_PASSWORD;
++  if (!MASTER_PASSWORD) {
++    return res.status(503).json({ error: 'Engine locked: APP_PASSWORD not configured in Vercel env vars.' });
++  }
+ 
+-  if (userAuth !== MASTER_PASSWORD) {
++  const userAuth = req.headers['authorization'];
++  if (!userAuth || userAuth !== MASTER_PASSWORD) {
+     return res.status(401).json({ error: 'Unauthorized: Invalid Access Key.' });
+   }
+ 
+@@ -46,6 +49,52 @@ module.exports = async function handler(req, res) {
+       return res.status(200).json(data);
+     }
+ 
++    // DETAILS MODE — phone + website for one place_id
++    if (mode === 'details') {
++      const { place_id } = req.query;
++      if (!place_id) return res.status(400).json({ error: 'place_id param required.' });
++      const url = `https://maps.googleapis.com/maps/api/place/details/json`
++        + `?place_id=${encodeURIComponent(place_id)}`
++        + `&fields=formatted_phone_number,website`
++        + `&key=${apiKey}`;
++      const data = await (await fetch(url)).json();
++      return res.status(200).json(data);
++    }
++
++    // EMAIL MODE — fetch a business website server-side, extract emails
++    if (mode === 'email') {
++      const { url: siteUrl } = req.query;
++      if (!siteUrl) return res.status(400).json({ error: 'url param required.' });
++      let target;
++      try { target = new URL(siteUrl); } catch { return res.status(400).json({ error: 'Invalid URL.' }); }
++      // Guard: public http(s) hosts only
++      const host = target.hostname.toLowerCase();
++      if (!/^https?:$/.test(target.protocol) ||
++          host === 'localhost' || /^(\d+\.){3}\d+$/.test(host) || host.endsWith('.local') || host.endsWith('.internal')) {
++        return res.status(400).json({ error: 'URL not allowed.' });
++      }
++      try {
++        const ctrl = new AbortController();
++        const timer = setTimeout(() => ctrl.abort(), 8000);
++        const resp = await fetch(target.href, {
++          signal: ctrl.signal,
++          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; COAILeadEngine/2.1)' }
++        });
++        clearTimeout(timer);
++        const html = (await resp.text()).slice(0, 400000);
++        const found = new Set();
++        // mailto links first (highest confidence)
++        for (const m of html.matchAll(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi)) found.add(m[1].toLowerCase());
++        // then raw emails in text
++        for (const m of html.matchAll(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}\b/g)) found.add(m[0].toLowerCase());
++        const JUNK = /\.(png|jpe?g|gif|svg|webp|css|js)$|@(example|sentry|wixpress|godaddy|domain|email|schema|placeholder|yourdomain|test)\.|^(noreply|no-reply|donotreply)@|@\dx\./;
++        const emails = [...found].filter(e => !JUNK.test(e)).slice(0, 3);
++        return res.status(200).json({ status: 'OK', emails });
++      } catch (e) {
++        return res.status(200).json({ status: 'FAILED', emails: [], error: e.name === 'AbortError' ? 'timeout' : e.message });
++      }
++    }
++
+     // NEARBYSEARCH (default)
+     if (!type) return res.status(400).json({ error: 'type param required.' });
+ 
+diff --git a/index.html b/index.html
+index 58b7142..d6c88ad 100644
+--- a/index.html
++++ b/index.html
+@@ -850,6 +850,35 @@ async function runSearch(){
+       return;
+     }
+     allLeads.sort((a,b) => b.score - a.score);
++
++    // ─── ENRICHMENT PASS: phone + website (Place Details), then email (site scrape) ───
++    const authKey = sessionStorage.getItem('coai_auth');
++    const enrichCap = Math.min(allLeads.length, 60); // cap detail calls to protect quota
++    for(let i=0; i<enrichCap; i++){
++      const lead = allLeads[i];
++      document.getElementById('loading-text').textContent = 'ENRICHING CONTACTS';
++      document.getElementById('loading-progress').textContent = `${i+1} / ${enrichCap} leads`;
++      document.getElementById('loading-sub').textContent = `Pulling phone + email for ${lead.name}...`;
++      try{
++        const d = await fetch(`/api/search?mode=details&place_id=${encodeURIComponent(lead.placeId)}`, { headers:{'Authorization':authKey} });
++        const dj = await d.json();
++        if(dj.result){
++          if(dj.result.formatted_phone_number){ lead.phone = dj.result.formatted_phone_number; lead.hasPhone = true; }
++          if(dj.result.website){ lead.website = dj.result.website; lead.hasWebsite = true; }
++        }
++      }catch(e){ /* keep going */ }
++
++      if(lead.website){
++        try{
++          const em = await fetch(`/api/search?mode=email&url=${encodeURIComponent(lead.website)}`, { headers:{'Authorization':authKey} });
++          const emj = await em.json();
++          if(emj.emails && emj.emails.length){ lead.email = emj.emails[0]; lead.allEmails = emj.emails; }
++        }catch(e){ /* no email, fine */ }
++      }
++      recomputeScore(lead); // re-score now that we know real phone/website state
++    }
++    allLeads.sort((a,b) => b.score - a.score);
++
+     renderLeads(allLeads);
+     updateStats();
+     saveToHistory();
+@@ -868,34 +897,46 @@ async function runSearch(){
+ }
+ 
+ // ─── BUILD LEAD ───
++// Note: NearbySearch does NOT return phone/website/email. Those are filled
++// during the enrichment pass (Place Details + site scrape). buildLead sets
++// provisional state; recomputeScore() runs after enrichment with real data.
+ function buildLead(place, cat){
+-  const hasWebsite = !!place.website;
+-  const rating = place.rating || 0;
+-  const reviews = place.user_ratings_total || 0;
+-  const hasPhone = !!place.formatted_phone_number;
++  const lead = {
++    id: place.place_id, name: place.name, cat,
++    address: place.vicinity || place.formatted_address || '',
++    rating: place.rating || 0, reviews: place.user_ratings_total || 0,
++    hasWebsite: false, website: '', phone: '', hasPhone: false,
++    email: '', allEmails: [],
++    score: 0, priority: 'low', signals: [], placeId: place.place_id,
++    mapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`, note: ''
++  };
++  recomputeScore(lead);
++  return lead;
++}
++
++// ─── SCORE (runs at build time AND after enrichment) ───
++function recomputeScore(lead){
++  const rating = lead.rating, reviews = lead.reviews;
+   let score = 0;
+-  if(!hasWebsite) score += 40;
++  if(!lead.hasWebsite) score += 40;
+   if(rating > 0 && rating < 3.5) score += 25;
+   if(rating === 0) score += 20;
+   if(reviews < 10) score += 15;
+-  if(!hasPhone) score += 10;
++  if(!lead.hasPhone) score += 10;
+   if(reviews === 0) score += 10;
+   const signals = [];
+-  if(!hasWebsite) signals.push({label:'No Website', type:'bad'});
++  if(!lead.hasWebsite) signals.push({label:'No Website', type:'bad'});
+   if(rating > 0 && rating < 3.5) signals.push({label:`${rating}★`, type:'bad'});
+   if(rating === 0) signals.push({label:'No Rating', type:'warn'});
+   if(reviews === 0) signals.push({label:'0 Reviews', type:'bad'});
+   else if(reviews < 10) signals.push({label:`${reviews} Reviews`, type:'warn'});
+-  if(!hasPhone) signals.push({label:'No Phone', type:'warn'});
++  if(lead.hasPhone) signals.push({label:'☎ Phone', type:'ok'});
++  if(lead.email) signals.push({label:'✉ Email', type:'ok'});
+   if(reviews >= 10 && rating >= 4) signals.push({label:'Active Biz', type:'ok'});
+   if(reviews >= 50) signals.push({label:`${reviews} Reviews`, type:'ok'});
+-  const priority = score >= 50 ? 'high' : score >= 25 ? 'med' : 'low';
+-  return {
+-    id: place.place_id, name: place.name, cat, address: place.vicinity || place.formatted_address || '',
+-    rating, reviews, hasWebsite, website: place.website || '', phone: place.formatted_phone_number || '',
+-    hasPhone, score, priority, signals, placeId: place.place_id,
+-    mapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`, note: ''
+-  };
++  lead.score = score;
++  lead.priority = score >= 50 ? 'high' : score >= 25 ? 'med' : 'low';
++  lead.signals = signals;
+ }
+ 
+ // ─── RENDER LEADS ───
+@@ -928,6 +969,7 @@ function renderLeads(leads){
+       <div class="lead-actions">
+         <button class="action-btn" onclick="openMaps('${lead.mapsUrl}')">Maps</button>
+         ${lead.phone ? `<button class="action-btn" onclick="callLead('${phoneSafe}')">Call ${lead.phone}</button>` : ''}
++        ${lead.email ? `<button class="action-btn" onclick="window.location.href='mailto:${lead.email}'">✉ ${lead.email}</button>` : ''}
+         ${lead.website ? `<button class="action-btn" onclick="window.open('${lead.website}','_blank')">Website</button>` : ''}
+         <button class="action-btn" onclick="openOutreach('${lead.id}')">Outreach</button>
+         <button class="action-btn mark-contacted" onclick="markContacted('${lead.id}')">Contacted</button>
+@@ -1069,9 +1111,9 @@ function closeModal(e){
+ // ─── EXPORT CSV ───
+ function exportCSV(){
+   if(allLeads.length === 0){alert('No leads to export.');return;}
+-  const headers = ['Name','Category','Address','Phone','Has Website','Website','Rating','Reviews','Score','Priority','Status','Note'];
++  const headers = ['Name','Category','Address','Phone','Email','Has Website','Website','Rating','Reviews','Score','Priority','Status','Note'];
+   const rows = allLeads.map(l=>[
+-    `"${l.name.replace(/"/g,'""')}"`, `"${l.cat}"`, `"${l.address}"`, l.phone,
++    `"${l.name.replace(/"/g,'""')}"`, `"${l.cat}"`, `"${l.address}"`, l.phone, l.email||'',
+     l.hasWebsite?'Yes':'No', l.website||'', l.rating||'', l.reviews||'', l.score, l.priority,
+     closed.has(l.id)?'Closed':contacted.has(l.id)?'Contacted':'New',
+     `"${(l.note||'').replace(/"/g,'""')}"`
+@@ -1082,9 +1124,9 @@ function exportCSV(){
+ function exportHotCSV(){
+   const hot = allLeads.filter(l=>l.score>=50);
+   if(hot.length === 0){alert('No hot leads to export.');return;}
+-  const headers = ['Name','Category','Address','Phone','Has Website','Rating','Reviews','Score'];
++  const headers = ['Name','Category','Address','Phone','Email','Has Website','Rating','Reviews','Score'];
+   const rows = hot.map(l=>[
+-    `"${l.name.replace(/"/g,'""')}"`, `"${l.cat}"`, `"${l.address}"`, l.phone,
++    `"${l.name.replace(/"/g,'""')}"`, `"${l.cat}"`, `"${l.address}"`, l.phone, l.email||'',
+     l.hasWebsite?'Yes':'No', l.rating||'', l.reviews||'', l.score
+   ]);
+   downloadCSV([headers,...rows], `coai-HOT-leads-${new Date().toISOString().slice(0,10)}.csv`);
+@@ -1117,20 +1159,23 @@ function unlockEngine(){
+   if(!key) return;
+   fetch('/api/search?mode=ping', { headers: { 'Authorization': key } })
+     .then(r => {
+-      if(r.status === 401){
+-        document.getElementById('login-error').style.display = 'block';
+-        document.getElementById('access-key').value = '';
+-        document.getElementById('access-key').focus();
+-      } else {
++      if(r.ok){
+         sessionStorage.setItem('coai_auth', key);
+         document.getElementById('login-overlay').style.display = 'none';
+         renderHistory();
++      } else {
++        const err = document.getElementById('login-error');
++        err.textContent = r.status === 401 ? 'Invalid key. Try again.' : 'Engine error (' + r.status + '). Check Vercel env vars.';
++        err.style.display = 'block';
++        document.getElementById('access-key').value = '';
++        document.getElementById('access-key').focus();
+       }
+     })
+     .catch(() => {
+-      sessionStorage.setItem('coai_auth', key);
+-      document.getElementById('login-overlay').style.display = 'none';
+-      renderHistory();
++      // FAIL CLOSED: network failure does not open the gate.
++      const err = document.getElementById('login-error');
++      err.textContent = 'Network error. Check connection and retry.';
++      err.style.display = 'block';
+     });
+ }
+ 
