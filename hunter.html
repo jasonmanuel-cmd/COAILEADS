@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COAI Lead Hunter</title>
+<style>
+:root{--bg:#070b12;--panel:#101722;--panel2:#0b111a;--line:#263348;--text:#eef3fb;--muted:#94a3b8;--purple:#7c3aed;--green:#22c55e;--red:#ef4444;--amber:#f59e0b}*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#070b12,#0b1020 55%,#140a28);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1800px;margin:auto;padding:20px}.hero{padding:24px;border:1px solid var(--line);border-radius:18px;background:rgba(16,23,34,.94);box-shadow:0 25px 70px rgba(0,0,0,.32)}h1{margin:4px 0 8px;font-size:34px}.eyebrow{font-size:12px;letter-spacing:.18em;color:#c4b5fd;font-weight:800}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:10px;margin-top:18px}.field{display:flex;flex-direction:column;gap:6px}.field label{font-size:12px;color:#bdc8d8;font-weight:700}.field input,.field select{width:100%;background:#070c13;color:#fff;border:1px solid var(--line);border-radius:10px;padding:11px}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}button{border:0;border-radius:10px;padding:11px 15px;font-weight:800;cursor:pointer;background:#1a2535;color:white}button.primary{background:var(--purple)}button.danger{background:#7f1d1d}button:hover{filter:brightness(1.12)}.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:14px 0}.stat{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px}.stat b{display:block;font-size:26px}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);padding:12px;border-radius:14px}.toolbar input,.toolbar select{background:#070c13;color:#fff;border:1px solid var(--line);padding:9px;border-radius:8px}.status{margin-left:auto;color:#c4b5fd;font-weight:700}.tablebox{margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:auto;background:var(--panel2);max-height:66vh}table{border-collapse:collapse;width:100%;min-width:1750px}th,td{padding:10px;border-bottom:1px solid #1f2b3d;text-align:left;font-size:13px;vertical-align:top}th{position:sticky;top:0;background:#121a28;color:#d8e3f2;z-index:2;cursor:pointer}tr:hover td{background:#111a27}.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.good{background:#123c28;color:#a7f3d0}.bad{background:#481c24;color:#fecdd3}.warn{background:#4a3511;color:#fde68a}.score{font-weight:900;font-size:16px}.link{color:#c4b5fd;text-decoration:none}.small{font-size:11px;color:var(--muted)}@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.stats{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="hero">
+<div class="eyebrow">CHAOTICALLY ORGANIZED AI · LEAD ENGINE</div>
+<h1>Automatic Lead Hunter</h1>
+<div class="muted">Generate local leads from Google Places, enrich phone and website data, score opportunities, remove duplicates, and export the table.</div>
+<div class="grid">
+<div class="field"><label>COAI access key</label><input id="key" type="password" placeholder="APP_PASSWORD"></div>
+<div class="field"><label>City / market</label><input id="city" value="Bakersfield, CA"></div>
+<div class="field"><label>Industry / keyword</label><input id="industry" value="electrician"></div>
+<div class="field"><label>Radius</label><select id="radius"><option value="5000">3 miles</option><option value="10000" selected>6 miles</option><option value="20000">12 miles</option><option value="40000">25 miles</option></select></div>
+<div class="field"><label>Target leads</label><select id="target"><option>20</option><option selected>40</option><option>60</option></select></div>
+<div class="field"><label>Auto-run</label><select id="interval"><option value="0">Off</option><option value="15">Every 15 minutes</option><option value="30">Every 30 minutes</option><option value="60">Every hour</option></select></div>
+</div>
+<div class="actions">
+<button class="primary" id="generate">Generate Leads</button>
+<button id="test">Test Connection</button>
+<button id="export">Export CSV</button>
+<button id="clearFilters">Reset Filters</button>
+<button class="danger" id="deleteAll">Delete All Saved Leads</button>
+</div>
+</section>
+<div class="stats">
+<div class="stat"><span class="muted">Saved leads</span><b id="sTotal">0</b></div>
+<div class="stat"><span class="muted">No website</span><b id="sNoSite">0</b></div>
+<div class="stat"><span class="muted">No phone</span><b id="sNoPhone">0</b></div>
+<div class="stat"><span class="muted">Hot leads</span><b id="sHot">0</b></div>
+<div class="stat"><span class="muted">Average rating</span><b id="sRating">0</b></div>
+<div class="stat"><span class="muted">Last run</span><b id="sLast" style="font-size:15px">Never</b></div>
+</div>
+<div class="toolbar">
+<input id="filter" placeholder="Filter name, phone, site, address…" size="35">
+<select id="siteFilter"><option value="all">All website statuses</option><option value="missing">No website</option><option value="has">Has website</option></select>
+<select id="priorityFilter"><option value="all">All priorities</option><option value="hot">Hot 80+</option><option value="today">Contact today 60+</option><option value="later">Later below 60</option></select>
+<select id="stageFilter"><option value="all">All stages</option><option>New</option><option>Research</option><option>Contacted</option><option>Qualified</option><option>Won</option><option>Lost</option></select>
+<span class="status" id="status">Ready</span>
+</div>
+<div class="tablebox"><table><thead><tr>
+<th data-sort="score">Score</th><th data-sort="name">Business</th><th>Phone</th><th>Website</th><th>Address</th><th data-sort="rating">Rating</th><th>Reviews</th><th>Google</th><th>Problem</th><th>Best COAI Offer</th><th>Stage</th><th>Notes</th><th>Added</th><th>Delete</th>
+</tr></thead><tbody id="rows"></tbody></table></div>
+</div>
+<script>
+const API='/api/search';
+const KEY='coai_hunter_leads_v1';
+const SETTINGS='coai_hunter_settings_v1';
+let leads=JSON.parse(localStorage.getItem(KEY)||'[]');
+let sortKey='score', sortDir=-1, timer=null;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(leads));render()}
+function loadSettings(){const s=JSON.parse(localStorage.getItem(SETTINGS)||'{}');['city','industry','radius','target','interval'].forEach(k=>{if(s[k]!=null)$(k).value=s[k]});if(s.key)$('key').value=s.key;setupTimer()}
+function saveSettings(){const s={};['city','industry','radius','target','interval'].forEach(k=>s[k]=$(k).value);s.key=$('key').value;localStorage.setItem(SETTINGS,JSON.stringify(s));setupTimer()}
+async function api(params){const q=new URLSearchParams(params);const r=await fetch(API+'?'+q,{headers:{Authorization:$('key').value}});const data=await r.json();if(!r.ok||data.error)throw new Error(data.error||('HTTP '+r.status));return data}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function scoreLead(d){let s=0;if(!d.website)s+=35;if(!d.phone)s+=18;if((d.rating||0)<4.2)s+=10;if((d.reviews||0)<25)s+=12;else if((d.reviews||0)<75)s+=6;if(d.status==='OPERATIONAL')s+=8;if(d.website)s+=8;if(d.phone)s+=9;return Math.min(100,s)}
+function problem(d){if(!d.website&&!d.phone)return 'No website and no public phone';if(!d.website)return 'No website on Google listing';if(!d.phone)return 'No public phone on Google listing';if((d.reviews||0)<15)return 'Low review authority';if((d.rating||0)<4.2)return 'Reputation weakness';return 'Needs conversion audit'}
+function offer(d){if(!d.website)return 'Sovereign website + lead capture + missed-call text-back';if(!d.phone)return 'Contact funnel + booking or quote automation';if((d.reviews||0)<15)return 'Local SEO + review generation + AEO/GEO';return 'Website conversion audit + automation'}
+async function geocode(city){const d=await api({mode:'geocode',location:city});if(d.status!=='OK'||!d.results?.length)throw new Error('Could not locate '+city);return d.results[0].geometry.location}
+async function details(place){const d=await api({mode:'placedetails',place_id:place.place_id});const x=d.result||{};return {placeId:place.place_id,name:x.name||place.name||'',phone:x.formatted_phone_number||x.international_phone_number||'',website:x.website||'',address:x.formatted_address||place.vicinity||'',rating:x.rating??place.rating??0,reviews:x.user_ratings_total??place.user_ratings_total??0,maps:x.url||'',status:x.business_status||place.business_status||'',types:x.types||place.types||[]}}
+async function generate(){saveSettings();if(!$('key').value)return alert('Enter your COAI access key first.');$('generate').disabled=true;$('status').textContent='Locating market…';try{const loc=await geocode($('city').value.trim());let token='',places=[],page=0,target=Number($('target').value);do{if(page>0)await sleep(2200);$('status').textContent=`Searching Google page ${page+1}…`;const d=await api({lat:loc.lat,lng:loc.lng,radius:$('radius').value,type:$('industry').value.trim(),pagetoken:token});if(d.status==='INVALID_REQUEST'&&token){await sleep(2000);continue}places.push(...(d.results||[]));token=d.next_page_token||'';page++}while(token&&places.length<target&&page<3);places=places.slice(0,target);let added=0;for(let i=0;i<places.length;i++){$('status').textContent=`Enriching ${i+1} of ${places.length}…`;try{const d=await details(places[i]);d.score=scoreLead(d);d.problem=problem(d);d.offer=offer(d);d.stage='New';d.notes='';d.market=$('city').value.trim();d.industry=$('industry').value.trim();d.addedAt=new Date().toISOString();const existing=leads.find(x=>x.placeId===d.placeId||((x.phone&&d.phone)&&x.phone.replace(/\D/g,'')===d.phone.replace(/\D/g,'')));if(existing)Object.assign(existing,d,{stage:existing.stage||'New',notes:existing.notes||''});else{leads.push(d);added++}}catch(e){console.warn(e)}await sleep(120)}localStorage.setItem(KEY,JSON.stringify(leads));localStorage.setItem('coai_hunter_last_run',new Date().toISOString());$('status').textContent=`Done — ${added} new, ${places.length-added} updated`;render()}catch(e){$('status').textContent='Error: '+e.message;alert(e.message)}finally{$('generate').disabled=false}}
+function setupTimer(){if(timer)clearInterval(timer);const mins=Number($('interval').value);if(mins>0)timer=setInterval(generate,mins*60000)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function render(){const text=$('filter').value.toLowerCase();const sf=$('siteFilter').value,pf=$('priorityFilter').value,st=$('stageFilter').value;let list=leads.filter(l=>{const hay=JSON.stringify(l).toLowerCase();if(text&&!hay.includes(text))return false;if(sf==='missing'&&l.website)return false;if(sf==='has'&&!l.website)return false;if(pf==='hot'&&l.score<80)return false;if(pf==='today'&&l.score<60)return false;if(pf==='later'&&l.score>=60)return false;if(st!=='all'&&l.stage!==st)return false;return true});list.sort((a,b)=>{const av=a[sortKey]??'',bv=b[sortKey]??'';return av>bv?sortDir:av<bv?-sortDir:0});$('rows').innerHTML=list.map(l=>{const i=leads.indexOf(l),web=l.website?`<a class="link" target="_blank" href="${esc(l.website)}">Open site</a>`:`<span class="pill bad">No website</span>`,phone=l.phone?`<a class="link" href="tel:${esc(l.phone)}">${esc(l.phone)}</a>`:`<span class="pill bad">No phone</span>`,p=l.score>=80?'good':l.score>=60?'warn':'bad';return `<tr><td><span class="pill ${p} score">${l.score}</span></td><td><b>${esc(l.name)}</b><div class="small">${esc(l.industry||'')}</div></td><td>${phone}</td><td>${web}</td><td>${esc(l.address)}</td><td>${Number(l.rating||0).toFixed(1)}</td><td>${l.reviews||0}</td><td>${l.maps?`<a class="link" target="_blank" href="${esc(l.maps)}">Maps</a>`:''}</td><td>${esc(l.problem)}</td><td>${esc(l.offer)}</td><td><select onchange="updateStage(${i},this.value)">${['New','Research','Contacted','Qualified','Won','Lost'].map(x=>`<option ${x===l.stage?'selected':''}>${x}</option>`).join('')}</select></td><td><input value="${esc(l.notes||'')}" oninput="updateNotes(${i},this.value)" placeholder="Notes"></td><td>${new Date(l.addedAt).toLocaleDateString()}</td><td><button class="danger" onclick="removeLead(${i})">Delete</button></td></tr>`}).join('');const total=leads.length,noSite=leads.filter(x=>!x.website).length,noPhone=leads.filter(x=>!x.phone).length,hot=leads.filter(x=>x.score>=80).length,ratings=leads.filter(x=>x.rating);$('sTotal').textContent=total;$('sNoSite').textContent=noSite;$('sNoPhone').textContent=noPhone;$('sHot').textContent=hot;$('sRating').textContent=ratings.length?(ratings.reduce((a,b)=>a+Number(b.rating),0)/ratings.length).toFixed(1):'0';const last=localStorage.getItem('coai_hunter_last_run');$('sLast').textContent=last?new Date(last).toLocaleString():'Never'}
+window.updateStage=(i,v)=>{leads[i].stage=v;localStorage.setItem(KEY,JSON.stringify(leads))};window.updateNotes=(i,v)=>{leads[i].notes=v;localStorage.setItem(KEY,JSON.stringify(leads))};window.removeLead=i=>{leads.splice(i,1);save()};
+function csv(){const cols=['score','name','phone','website','address','rating','reviews','maps','problem','offer','stage','notes','market','industry','addedAt'];const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';return [cols.join(','),...leads.map(l=>cols.map(c=>q(l[c])).join(','))].join('\n')}
+$('generate').onclick=generate;$('test').onclick=async()=>{saveSettings();try{const d=await api({mode:'ping'});$('status').textContent=d.status==='authorized'?'Connected and authorized':'Unexpected response'}catch(e){$('status').textContent='Connection failed: '+e.message}};$('export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv()],{type:'text/csv'}));a.download='coai-leads-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(a.href)};$('deleteAll').onclick=()=>{if(confirm('Delete every saved lead from this browser?')){leads=[];save()}};$('clearFilters').onclick=()=>{$('filter').value='';$('siteFilter').value='all';$('priorityFilter').value='all';$('stageFilter').value='all';render()};['filter','siteFilter','priorityFilter','stageFilter'].forEach(id=>$(id).addEventListener('input',render));document.querySelectorAll('th[data-sort]').forEach(th=>th.onclick=()=>{const k=th.dataset.sort;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1}render()});['city','industry','radius','target','interval','key'].forEach(id=>$(id).addEventListener('change',saveSettings));loadSettings();render();
+</script>
+</body>
+</html>
