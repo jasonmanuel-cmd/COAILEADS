@@ -5,11 +5,10 @@
 //   GOOGLE_PLACES_API_KEY
 //   APP_PASSWORD
 
+const { applyCors } = require('./_cors');
+
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!applyCors(req, res, { methods: 'GET, OPTIONS' })) return;
 
   const MASTER_PASSWORD = process.env.APP_PASSWORD;
   if (!MASTER_PASSWORD) {
