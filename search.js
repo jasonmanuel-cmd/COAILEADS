@@ -10,12 +10,10 @@
 //   ping     — auth check only, no Google call
 //   default  — NearbySearch with keyword + pagination
 
+const { applyCors } = require('./api/_cors');
+
 module.exports = async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!applyCors(req, res, { methods: 'GET, OPTIONS' })) return;
 
   // AUTH CHECK — fail closed. No env var = no access, no fallback.
   const MASTER_PASSWORD = process.env.APP_PASSWORD;

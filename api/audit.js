@@ -1,9 +1,8 @@
 // api/audit.js — lightweight website opportunity audit
+const { applyCors } = require('./_cors');
+
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (!applyCors(req, res, { methods: 'GET, OPTIONS' })) return;
   const password=process.env.APP_PASSWORD;
   if(!password)return res.status(500).json({error:'APP_PASSWORD not configured.'});
   if(req.headers.authorization!==password)return res.status(401).json({error:'Unauthorized.'});
